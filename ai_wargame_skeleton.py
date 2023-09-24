@@ -368,6 +368,14 @@ class Game:
         if self.is_valid_move(coords):
             #unit_at_source = self.get(coords.src)
             #unit_at_destination = self.get(coords.dst)
+            
+           # Check if the source and destination are adjacent
+            #if not coords.src.iter_adjacent(coords.dst):
+                #return (False, "invalid move")
+
+           # Check if the source and destination units belong to different players
+            #if unit_at_source.player == unit_at_destination.player:
+                #return (False, "invalid move")
 
             # If there's a unit at the destination, handle combat
             #if unit_at_destination:
