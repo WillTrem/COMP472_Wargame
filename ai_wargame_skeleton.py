@@ -366,9 +366,22 @@ class Game:
     def perform_move(self, coords: CoordPair) -> Tuple[bool, str]:
         """Validate and perform a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         if self.is_valid_move(coords):
+            #unit_at_source = self.get(coords.src)
+            #unit_at_destination = self.get(coords.dst)
+
+            # If there's a unit at the destination, handle combat
+            #if unit_at_destination:
+                #damage = unit_at_source.damage_amount(unit_at_destination)
+                #unit_at_destination.mod_health(-damage)
+
+            # Remove dead unit at destination
+            #if not unit_at_destination.is_alive():
+                #self.set(coords.dst, None)
+                
             self.set(coords.dst, self.get(coords.src))
             self.set(coords.src, None)
             return (True, "")
+        
         return (False, "invalid move")
 
     def next_turn(self):
