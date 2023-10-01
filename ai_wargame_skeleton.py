@@ -368,6 +368,7 @@ class Game:
 
         # Generating the unit from the source coordinate, generating an array of all adjacent coordinates for possible moves
         unit = self.get(coords.src)
+        dst_unit = self.get(coords.dst)
         adjacentCoords = Coord.iter_adjacent(coords.src)
 
         # Checking that the source coordinate is indeed a unit
@@ -382,7 +383,7 @@ class Game:
             return False
 
         # No movement restrictions on Viruses or Tech
-        if unit.type not in [UnitType.Virus, UnitType.Tech]:
+        if unit.type not in [UnitType.Virus, UnitType.Tech] and dst_unit is None: # Those units may still repair or attack in those coordinates
             # Verifying if the unit is engaged in combat
             for adjacentCoord in adjacentCoords:
                 adjacentUnit = self.get(adjacentCoord)
@@ -399,6 +400,16 @@ class Game:
                 if coords.dst.col < coords.src.col or coords.dst.row < coords.src.row:
                     print("That unit may only go down or right.")
                     return False
+
+        # If the move is a repair, checking that a tech is not repairing a virus
+        if dst_unit is not None and dst_unit.player == unit.player: # Checking if the move is a repair
+            if unit is UnitType.Tech and dst_unit is UnitType.Virus:
+                print("Your tech cannot repair your virus.")
+                return False
+            
+            if dst_unit.health >= 9: # Checking if the destination unit is alrdy at full health
+                print("That unit is at full health. You can't repair it.")
+                return False
 
         return True
 
