@@ -256,6 +256,33 @@ class Game:
     stats: Stats = field(default_factory=Stats)
     _attacker_has_ai: bool = True
     _defender_has_ai: bool = True
+    file: file | None = None
+
+    def write_initial_state_to_file(self):
+        """Writes the initial parameters and state of the game to the output file"""
+        self.file = open(
+            f'gameTrace-{self.options.alpha_beta}-{self.options.max_time}-{self.options.max_turns}.txt', "w+")
+        self.file.write("---PARAMETERS---\n")
+        self.file.write(f"Timeout value: {self.options.max_time} seconds\n")
+        self.file.write(f"Alpha-beta: {self.options.alpha_beta}\n")
+        # TODO: make it look better
+        self.file.write(f"Play mode: {self.options.game_type.name}\n")
+        # TODO: print heuristic if one of the players is AI
+
+        self.file.write("\n---INITIAL BOARD CONFIG---\n")
+        self.file.write(self.to_string())
+        self.file.write("\n---GAME TRACE---\n")
+
+    def write_turn_to_file(self, move: CoordPair):
+        """Writes the current turn to the output file"""
+        self.file.write(f"\nTurn #{self.turns_played + 1}\n")
+        self.file.write(f"Player: {self.next_player.name}\n")
+        self.file.write(f"Action taken: {move.to_string()}\n")
+        # TODO: Write AI time for the action
+        # TODO: Write AI heuristic score of the resulting board
+        self.file.write(
+            f"New board configuration: \n{self.board_to_string()}\n")
+        # TODO: AI cumulative information about the game so far
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -381,12 +408,11 @@ class Game:
             if not dst_unit:
                 self.set(coords.dst, src_unit)
                 self.set(coords.src, None)
-                # return
 
             # Src and Dst coordinates are the same -> Perform self-destruct
             elif coords.src == coords.dst:
                 # Source unit is removed from the board
-                self.set(coords.src, None)
+                self.mod_health(coords.src, -src_unit.health)
 
                 # Damage all adjacent units by 2
                 for adjacentCoord in adjacentCoords:
@@ -394,31 +420,16 @@ class Game:
                     if adjacentUnit is not None:
                         adjacentUnit.mod_health(-2)
 
-                        # Remove the adjacent unit from the board if it died
-                        if not adjacentUnit.is_alive():
-                            self.set(adjacentCoord, None)
-
-                # return
-
             # Enemy unit at destination -> Perform the attack
             elif dst_unit and dst_unit.player != src_unit.player:
                 dmg = src_unit.damage_amount(dst_unit)
-                src_unit.mod_health(-dmg)
-                dst_unit.mod_health(-dmg)
-
-                # If any of the units died during the attack, remove them from the board
-                if not src_unit.is_alive():
-                    self.set(coords.src, None)
-
-                if not dst_unit.is_alive():
-                    self.set(coords.dst, None)
-                # return
+                self.mod_health(coords.src, -dmg)
+                self.mod_health(coords.dst, -dmg)
 
             # Team unit at destination -> Perform the repair
             elif dst_unit and dst_unit.player == src_unit.player:
                 repair = src_unit.repair_amount(dst_unit)
-                dst_unit.mod_health(repair)
-                # return
+                self.mod_health(coords.dst, repair)
 
             return (True, "")
 
@@ -428,6 +439,30 @@ class Game:
         """Transitions game to the next turn."""
         self.next_player = self.next_player.next()
         self.turns_played += 1
+
+    def board_to_string(self) -> str:
+        """Text representation of the game board only"""
+        dim = self.options.dim
+        coord = Coord()
+        output = "\n   "
+        for col in range(dim):
+            coord.col = col
+            label = coord.col_string()
+            output += f"{label:^3} "
+        output += "\n"
+        for row in range(dim):
+            coord.row = row
+            label = coord.row_string()
+            output += f"{label}: "
+            for col in range(dim):
+                coord.col = col
+                unit = self.get(coord)
+                if unit is None:
+                    output += " .  "
+                else:
+                    output += f"{str(unit):^3} "
+            output += "\n"
+        return output
 
     def to_string(self) -> str:
         """Pretty text representation of the game."""
@@ -498,6 +533,7 @@ class Game:
                 if success:
                     print(f"Player {self.next_player.name}: ", end='')
                     print(result)
+                    self.write_turn_to_file(mv)
                     self.next_turn()
                     break
                 else:
@@ -667,6 +703,8 @@ def main():
     # create a new game
     game = Game(options=options)
 
+    game.write_initial_state_to_file()
+
     # the main game loop
     while True:
         print()
@@ -674,7 +712,10 @@ def main():
         winner = game.has_winner()
         if winner is not None:
             print(f"{winner.name} wins!")
+            game.file.write(f"\n{winner.name} wins in {game.turns_played}")
+            game.file.close()
             break
+
         if game.options.game_type == GameType.AttackerVsDefender:
             game.human_turn()
         elif game.options.game_type == GameType.AttackerVsComp and game.next_player == Player.Attacker:
