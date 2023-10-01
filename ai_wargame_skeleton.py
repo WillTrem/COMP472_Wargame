@@ -331,18 +331,19 @@ class Game:
         if not self.is_valid_coord(coords.src) or not self.is_valid_coord(coords.dst):
             print("Invalid coordinate input")
             return False
-        
+
         # Generating the unit from the source coordinate, generating an array of all adjacent coordinates for possible moves
         unit = self.get(coords.src)
         adjacentCoords = Coord.iter_adjacent(coords.src)
 
         # Checking that the source coordinate is indeed a unit
         if unit is None or unit.player != self.next_player:
-            print("There is no unit in your source coordinate or you do not own that unit.")
+            print(
+                "There is no unit in your source coordinate or you do not own that unit.")
             return False
 
         # Checking that the destination coordinate is an adjacent square
-        if coords.dst not in adjacentCoords:
+        if coords.dst not in adjacentCoords and coords.dst != coords.src:
             print("Your destination coordinate is not adjacent to the source coordinate.")
             return False
 
@@ -380,47 +381,47 @@ class Game:
             if not dst_unit:
                 self.set(coords.dst, src_unit)
                 self.set(coords.src, None)
-                return 
-            
+                # return
+
             # Src and Dst coordinates are the same -> Perform self-destruct
-            if coords.src == coords.dst:
+            elif coords.src == coords.dst:
                 # Source unit is removed from the board
                 self.set(coords.src, None)
-                
+
                 # Damage all adjacent units by 2
                 for adjacentCoord in adjacentCoords:
                     adjacentUnit = self.get(adjacentCoord)
                     if adjacentUnit is not None:
                         adjacentUnit.mod_health(-2)
 
-                    # Remove the adjacent unit from the board if it died
-                    if not adjacentUnit.is_alive:
-                        self.set(adjacentCoord, None)
-            
-                return
-            
+                        # Remove the adjacent unit from the board if it died
+                        if not adjacentUnit.is_alive():
+                            self.set(adjacentCoord, None)
+
+                # return
+
             # Enemy unit at destination -> Perform the attack
-            if dst_unit and dst_unit.player != src_unit.player:
+            elif dst_unit and dst_unit.player != src_unit.player:
                 dmg = src_unit.damage_amount(dst_unit)
                 src_unit.mod_health(-dmg)
                 dst_unit.mod_health(-dmg)
 
                 # If any of the units died during the attack, remove them from the board
-                if not src_unit.is_alive:
+                if not src_unit.is_alive():
                     self.set(coords.src, None)
 
-                if not dst_unit.is_alive:
+                if not dst_unit.is_alive():
                     self.set(coords.dst, None)
-                return
-            
+                # return
+
             # Team unit at destination -> Perform the repair
-            if dst_unit and dst_unit.player == src_unit.player:
+            elif dst_unit and dst_unit.player == src_unit.player:
                 repair = src_unit.repair_amount(dst_unit)
                 dst_unit.mod_health(repair)
-                return
-                
+                # return
+
             return (True, "")
-        
+
         return (False, "invalid move")
 
     def next_turn(self):
