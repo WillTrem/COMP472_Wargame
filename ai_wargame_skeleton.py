@@ -151,6 +151,13 @@ class Coord:
         yield Coord(self.row+1, self.col)
         yield Coord(self.row, self.col+1)
 
+    def iter_diagonal(self) -> Iterable[Coord]:
+        """"Iterates over diagonal Coords."""
+        yield Coord(self.row-1, self.col-1)
+        yield Coord(self.row-1, self.col+1)
+        yield Coord(self.row+1, self.col-1)
+        yield Coord(self.row+1, self.col+1)
+
     @classmethod
     def from_string(cls, s: str) -> Coord | None:
         """Create a Coord from a string. ex: D2."""
@@ -403,6 +410,7 @@ class Game:
             src_unit = self.get(coords.src)
             dst_unit = self.get(coords.dst)
             adjacentCoords = Coord.iter_adjacent(coords.src)
+            diagonalCoords = Coord.iter_diagonal(coords.src) # Generating adjacent but diagonal coordinates for self-destruct
 
             # Empty destination -> Perform the movement, stop the method
             if not dst_unit:
@@ -419,6 +427,11 @@ class Game:
                     adjacentUnit = self.get(adjacentCoord)
                     if adjacentUnit is not None:
                         adjacentUnit.mod_health(-2)
+
+                for diagonalCoord in diagonalCoords:
+                    diagonalUnit = self.get(diagonalCoord)
+                    if diagonalUnit is not None:
+                        diagonalUnit.mod_health(-2)
 
             # Enemy unit at destination -> Perform the attack
             elif dst_unit and dst_unit.player != src_unit.player:
