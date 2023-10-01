@@ -402,7 +402,7 @@ class Game:
                     return False
 
         # If the move is a repair, checking that a tech is not repairing a virus
-        if dst_unit is not None and dst_unit.player == unit.player: # Checking if the move is a repair
+        if dst_unit is not None and dst_unit.player == unit.player and not dst_unit == unit: # Checking if the move is a repair
             if unit is UnitType.Tech and dst_unit is UnitType.Virus:
                 print("Your tech cannot repair your virus.")
                 return False
