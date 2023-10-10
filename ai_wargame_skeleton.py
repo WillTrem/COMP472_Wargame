@@ -8,6 +8,7 @@ from time import sleep
 from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
 import requests
+import math
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -21,7 +22,6 @@ class UnitType(Enum):
     Virus = 2
     Program = 3
     Firewall = 4
-
 
 class Player(Enum):
     """The 2 players."""
@@ -237,7 +237,7 @@ class Options:
     max_time: float | None = 5.0
     game_type: GameType = GameType.AttackerVsDefender
     alpha_beta: bool = True
-    max_turns: int | None = 100
+    max_turns: int | None = None
     randomize_moves: bool = True
     broker: str | None = None
 
@@ -723,6 +723,18 @@ def main():
         options.max_time = args.max_time
     if args.broker is not None:
         options.broker = args.broker
+
+    if options.max_turns is None:
+        while True:
+            try:
+                max_turns = int(input("Enter the maximum number of turns: "))
+                if max_turns > 0:
+                    options.max_turns = max_turns
+                    break
+                else:
+                    print("Please enter a positive number of turns.")
+            except ValueError:
+                print("Please enter a valid integer for the number of turns.")
 
     # create a new game
     game = Game(options=options)
