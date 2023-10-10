@@ -264,7 +264,7 @@ class Game:
     _attacker_has_ai: bool = True
     _defender_has_ai: bool = True
     file: file | None = None
-
+    
     def write_initial_state_to_file(self):
         """Writes the initial parameters and state of the game to the output file"""
         self.file = open(
@@ -325,7 +325,45 @@ class Game:
         new = copy.copy(self)
         new.board = copy.deepcopy(self.board)
         return new
+    
+    def count_units(self, player: Player, unit_type: UnitType) -> int:
+        """Count the number of units of a specific type for a given player."""
+        count = 0
+        for unit in self.units[player]:
+            if unit.unit_type == unit_type:
+                count += 1
+        return count
 
+    def heuristic_e0(self) -> int:
+        """Heuristic function e0 based on the provided formula."""
+        attacker_vp = 3 * self.count_units(Player.Attacker, UnitType.Virus)
+        attacker_tp = 3 * self.count_units(Player.Attacker, UnitType.Tech)
+        attacker_fp = 3 * self.count_units(Player.Attacker, UnitType.Firewall)
+        attacker_pp = 3 * self.count_units(Player.Attacker, UnitType.Program)
+        attacker_aip = 9999 * self.count_units(Player.Attacker, UnitType.AI)
+
+        defender_vp = 3 * self.count_units(Player.Defender, UnitType.Virus)
+        defender_tp = 3 * self.count_units(Player.Defender, UnitType.Tech)
+        defender_fp = 3 * self.count_units(Player.Defender, UnitType.Firewall)
+        defender_pp = 3 * self.count_units(Player.Defender, UnitType.Program)
+        defender_aip = 9999 * self.count_units(Player.Defender, UnitType.AI)
+
+        return (attacker_vp + attacker_tp + attacker_fp + attacker_pp + attacker_aip) - \
+               (defender_vp + defender_tp + defender_fp + defender_pp + defender_aip)
+    
+    def evaluate(self) -> int:
+        """Evaluate the current game state using the provided heuristic."""
+        return self.heuristic_e0()
+    
+    def minimax(self, depth, maximizing_player, alpha, beta):
+        if depth == 0 or self.is_finished(): # If we've reached a leaf node or the game is finished, evaluate the current state.
+            return self.evaluate(), None
+
+        #if maximizing_player:
+    
+        #else: defender's turn (minimizing player)
+    
+    
     def is_empty(self, coord: Coord) -> bool:
         """Check if contents of a board cell of the game at Coord is empty (must be valid coord)."""
         return self.board[coord.row][coord.col] is None
@@ -624,7 +662,7 @@ class Game:
         (score, move, avg_depth) = self.random_move()
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
-        print(f"Heuristic score: {score}")
+        print(f"Heuristic score: {self.evaluate()}")
         print(f"Average recursive depth: {avg_depth:0.1f}")
         print(f"Evals per depth: ", end='')
         for k in sorted(self.stats.evaluations_per_depth.keys()):
