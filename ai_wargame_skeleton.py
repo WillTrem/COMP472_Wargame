@@ -8,7 +8,7 @@ from time import sleep
 from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
 
-# import requests
+import requests
 import math
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
@@ -408,7 +408,33 @@ class Game:
 
     # Heuristic e2 - Takes into account the health of all units, weighted by importance
     def heuristic_e2(self) -> int:
-        return 0
+        defender_units = self.player_units(Player.Defender)
+        attacker_units = self.player_units(Player.Attacker)
+
+        defender_health = 0
+        attacker_health = 0
+
+        for unit in defender_units:
+            if unit[1].type == UnitType.AI:
+                defender_health += 250 * unit[1].health
+            elif unit[1].type == UnitType.Tech:
+                defender_health += 25 * unit[1].health
+            elif unit[1].type == UnitType.Firewall:
+                defender_health += 10 * unit[1].health
+            else:
+                defender_health += unit[1].health
+
+        for unit in attacker_units:
+            if unit[1].type == UnitType.AI:
+                attacker_health += 250 * unit[1].health
+            elif unit[1].type == UnitType.Virus:
+                attacker_health += 25 * unit[1].health
+            elif unit[1].type == UnitType.Program:
+                attacker_health += 10 * unit[1].health
+            else:
+                attacker_health += unit[1].health
+
+        return 0.001 * attacker_health - 0.01 * defender_health
 
     def evaluate(self) -> int:
         """Evaluate the current game state using the provided heuristic."""
@@ -767,7 +793,6 @@ class Game:
     def read_move(self) -> CoordPair:
         """Read a move from keyboard and return as a CoordPair."""
         while True:
-            print(self.heuristic_e1())
             s = input(f"Player {self.next_player.name}, enter your move: ")
             coords = CoordPair.from_string(s)
             if (
