@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 from time import sleep
 from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
-import requests
+
+# import requests
 import math
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
@@ -17,14 +18,17 @@ MIN_HEURISTIC_SCORE = -2000000000
 
 class UnitType(Enum):
     """Every unit type."""
+
     AI = 0
     Tech = 1
     Virus = 2
     Program = 3
     Firewall = 4
 
+
 class Player(Enum):
     """The 2 players."""
+
     Attacker = 0
     Defender = 1
 
@@ -41,6 +45,7 @@ class GameType(Enum):
     AttackerVsComp = 1
     CompVsDefender = 2
     CompVsComp = 3
+
 
 ##############################################################################################################
 
@@ -103,32 +108,34 @@ class Unit:
             return 9 - target.health
         return amount
 
+
 ##############################################################################################################
 
 
 @dataclass(slots=True)
 class Coord:
     """Representation of a game cell coordinate (row, col)."""
+
     row: int = 0
     col: int = 0
 
     def col_string(self) -> str:
         """Text representation of this Coord's column."""
-        coord_char = '?'
+        coord_char = "?"
         if self.col < 16:
             coord_char = "0123456789abcdef"[self.col]
         return str(coord_char)
 
     def row_string(self) -> str:
         """Text representation of this Coord's row."""
-        coord_char = '?'
+        coord_char = "?"
         if self.row < 26:
             coord_char = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[self.row]
         return str(coord_char)
 
     def to_string(self) -> str:
         """Text representation of this Coord."""
-        return self.row_string()+self.col_string()
+        return self.row_string() + self.col_string()
 
     def __str__(self) -> str:
         """Text representation of this Coord."""
@@ -140,23 +147,23 @@ class Coord:
 
     def iter_range(self, dist: int) -> Iterable[Coord]:
         """Iterates over Coords inside a rectangle centered on our Coord."""
-        for row in range(self.row-dist, self.row+1+dist):
-            for col in range(self.col-dist, self.col+1+dist):
+        for row in range(self.row - dist, self.row + 1 + dist):
+            for col in range(self.col - dist, self.col + 1 + dist):
                 yield Coord(row, col)
 
     def iter_adjacent(self) -> Iterable[Coord]:
         """Iterates over adjacent Coords."""
-        yield Coord(self.row-1, self.col)
-        yield Coord(self.row, self.col-1)
-        yield Coord(self.row+1, self.col)
-        yield Coord(self.row, self.col+1)
+        yield Coord(self.row - 1, self.col)
+        yield Coord(self.row, self.col - 1)
+        yield Coord(self.row + 1, self.col)
+        yield Coord(self.row, self.col + 1)
 
     def iter_diagonal(self) -> Iterable[Coord]:
-        """"Iterates over diagonal Coords."""
-        yield Coord(self.row-1, self.col-1)
-        yield Coord(self.row-1, self.col+1)
-        yield Coord(self.row+1, self.col-1)
-        yield Coord(self.row+1, self.col+1)
+        """ "Iterates over diagonal Coords."""
+        yield Coord(self.row - 1, self.col - 1)
+        yield Coord(self.row - 1, self.col + 1)
+        yield Coord(self.row + 1, self.col - 1)
+        yield Coord(self.row + 1, self.col + 1)
 
     @classmethod
     def from_string(cls, s: str) -> Coord | None:
@@ -164,7 +171,7 @@ class Coord:
         s = s.strip()
         for sep in " ,.:;-_":
             s = s.replace(sep, "")
-        if (len(s) == 2):
+        if len(s) == 2:
             coord = Coord()
             coord.row = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".find(s[0:1].upper())
             coord.col = "0123456789abcdef".find(s[1:2].lower())
@@ -172,18 +179,20 @@ class Coord:
         else:
             return None
 
+
 ##############################################################################################################
 
 
 @dataclass(slots=True)
 class CoordPair:
     """Representation of a game move or a rectangular area via 2 Coords."""
+
     src: Coord = field(default_factory=Coord)
     dst: Coord = field(default_factory=Coord)
 
     def to_string(self) -> str:
         """Text representation of a CoordPair."""
-        return self.src.to_string()+" "+self.dst.to_string()
+        return self.src.to_string() + " " + self.dst.to_string()
 
     def __str__(self) -> str:
         """Text representation of a CoordPair."""
@@ -195,8 +204,8 @@ class CoordPair:
 
     def iter_rectangle(self) -> Iterable[Coord]:
         """Iterates over cells of a rectangular area."""
-        for row in range(self.src.row, self.dst.row+1):
-            for col in range(self.src.col, self.dst.col+1):
+        for row in range(self.src.row, self.dst.row + 1):
+            for col in range(self.src.col, self.dst.col + 1):
                 yield Coord(row, col)
 
     @classmethod
@@ -207,7 +216,7 @@ class CoordPair:
     @classmethod
     def from_dim(cls, dim: int) -> CoordPair:
         """Create a CoordPair based on a dim-sized rectangle."""
-        return CoordPair(Coord(0, 0), Coord(dim-1, dim-1))
+        return CoordPair(Coord(0, 0), Coord(dim - 1, dim - 1))
 
     @classmethod
     def from_string(cls, s: str) -> CoordPair | None:
@@ -215,7 +224,7 @@ class CoordPair:
         s = s.strip()
         for sep in " ,.:;-_":
             s = s.replace(sep, "")
-        if (len(s) == 4):
+        if len(s) == 4:
             coords = CoordPair()
             coords.src.row = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".find(s[0:1].upper())
             coords.src.col = "0123456789abcdef".find(s[1:2].lower())
@@ -225,12 +234,14 @@ class CoordPair:
         else:
             return None
 
+
 ##############################################################################################################
 
 
 @dataclass(slots=True)
 class Options:
     """Representation of the game options."""
+
     dim: int = 5
     max_depth: int | None = 4
     min_depth: int | None = 2
@@ -241,14 +252,17 @@ class Options:
     randomize_moves: bool = True
     broker: str | None = None
 
+
 ##############################################################################################################
 
 
 @dataclass(slots=True)
 class Stats:
     """Representation of the global game statistics."""
+
     evaluations_per_depth: dict[int, int] = field(default_factory=dict)
     total_seconds: float = 0.0
+
 
 ##############################################################################################################
 
@@ -256,6 +270,7 @@ class Stats:
 @dataclass(slots=True)
 class Game:
     """Representation of the game state."""
+
     board: list[list[Unit | None]] = field(default_factory=list)
     next_player: Player = Player.Attacker
     turns_played: int = 0
@@ -264,11 +279,13 @@ class Game:
     _attacker_has_ai: bool = True
     _defender_has_ai: bool = True
     file: file | None = None
-    
+
     def write_initial_state_to_file(self):
         """Writes the initial parameters and state of the game to the output file"""
         self.file = open(
-            f'gameTrace-{self.options.alpha_beta}-{self.options.max_time}-{self.options.max_turns}.txt', "w+")
+            f"gameTrace-{self.options.alpha_beta}-{self.options.max_time}-{self.options.max_turns}.txt",
+            "w+",
+        )
         self.file.write("---PARAMETERS---\n")
         self.file.write(f"Timeout value: {self.options.max_time} seconds\n")
         self.file.write(f"Alpha-beta: {self.options.alpha_beta}\n")
@@ -287,35 +304,28 @@ class Game:
         self.file.write(f"Action taken: {move.to_string()}\n")
         # TODO: Write AI time for the action
         # TODO: Write AI heuristic score of the resulting board
-        self.file.write(
-            f"New board configuration: \n{self.board_to_string()}\n")
+        self.file.write(f"New board configuration: \n{self.board_to_string()}\n")
         # TODO: AI cumulative information about the game so far
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
         dim = self.options.dim
         self.board = [[None for _ in range(dim)] for _ in range(dim)]
-        md = dim-1
+        md = dim - 1
         self.set(Coord(0, 0), Unit(player=Player.Defender, type=UnitType.AI))
         self.set(Coord(1, 0), Unit(player=Player.Defender, type=UnitType.Tech))
         self.set(Coord(0, 1), Unit(player=Player.Defender, type=UnitType.Tech))
-        self.set(Coord(2, 0), Unit(
-            player=Player.Defender, type=UnitType.Firewall))
-        self.set(Coord(0, 2), Unit(
-            player=Player.Defender, type=UnitType.Firewall))
-        self.set(Coord(1, 1), Unit(
-            player=Player.Defender, type=UnitType.Program))
+        self.set(Coord(2, 0), Unit(player=Player.Defender, type=UnitType.Firewall))
+        self.set(Coord(0, 2), Unit(player=Player.Defender, type=UnitType.Firewall))
+        self.set(Coord(1, 1), Unit(player=Player.Defender, type=UnitType.Program))
         self.set(Coord(md, md), Unit(player=Player.Attacker, type=UnitType.AI))
-        self.set(Coord(md-1, md),
-                 Unit(player=Player.Attacker, type=UnitType.Virus))
-        self.set(Coord(md, md-1),
-                 Unit(player=Player.Attacker, type=UnitType.Virus))
-        self.set(Coord(md-2, md),
-                 Unit(player=Player.Attacker, type=UnitType.Program))
-        self.set(Coord(md, md-2),
-                 Unit(player=Player.Attacker, type=UnitType.Program))
-        self.set(Coord(md-1, md-1),
-                 Unit(player=Player.Attacker, type=UnitType.Firewall))
+        self.set(Coord(md - 1, md), Unit(player=Player.Attacker, type=UnitType.Virus))
+        self.set(Coord(md, md - 1), Unit(player=Player.Attacker, type=UnitType.Virus))
+        self.set(Coord(md - 2, md), Unit(player=Player.Attacker, type=UnitType.Program))
+        self.set(Coord(md, md - 2), Unit(player=Player.Attacker, type=UnitType.Program))
+        self.set(
+            Coord(md - 1, md - 1), Unit(player=Player.Attacker, type=UnitType.Firewall)
+        )
 
     def clone(self) -> Game:
         """Make a new copy of a game for minimax recursion.
@@ -325,12 +335,18 @@ class Game:
         new = copy.copy(self)
         new.board = copy.deepcopy(self.board)
         return new
-    
+
     def count_units(self, player: Player, unit_type: UnitType) -> int:
         """Count the number of units of a specific type for a given player."""
+        mid_cell = Coord(2, 2)
+        grid = mid_cell.iter_range(2)
         count = 0
-        for unit in self.units[player]:
-            if unit.unit_type == unit_type:
+        for cell in grid:
+            if (
+                self.get(cell) is not None
+                and self.get(cell).type == unit_type
+                and self.get(cell).player == player
+            ):
                 count += 1
         return count
 
@@ -348,17 +364,62 @@ class Game:
         defender_pp = 3 * self.count_units(Player.Defender, UnitType.Program)
         defender_aip = 9999 * self.count_units(Player.Defender, UnitType.AI)
 
-        return (attacker_vp + attacker_tp + attacker_fp + attacker_pp + attacker_aip) - \
-               (defender_vp + defender_tp + defender_fp + defender_pp + defender_aip)
+        return (
+            attacker_vp + attacker_tp + attacker_fp + attacker_pp + attacker_aip
+        ) - (defender_vp + defender_tp + defender_fp + defender_pp + defender_aip)
+
+    # Heuristic e1 - This heuristic takes into consideration the relative proximity of the viruses/programs to the defender's AI
+    # We will give a higher score to the viruses since they do more damage, and since they can move freely!
+    def heuristic_e1(self) -> float:
+        ai_position = self.ai_position()
+        virus_positions = self.virus_position()
+        program_positions = self.prog_position()
+
+        virus_number = self.count_units(Player.Attacker, UnitType.Virus)
+        program_number = self.count_units(Player.Attacker, UnitType.Program)
+
+        virus_reach = 0
+        program_reach = 0
+
+        if virus_number > 0:
+            for virus in virus_positions:
+                virus_reach += self.reach(ai_position, virus)
+
+        if program_number > 0:
+            for program in program_positions:
+                program_reach += self.reach(ai_position, program)
+
+        # player unit returns an iterable array of tuples, the second arg in tuples is type unit, fetch health like that
+        defender_units = self.player_units(Player.Defender)
+        defender_health = 0
+
+        for unit in defender_units:
+            if unit[1].type == UnitType.AI:
+                defender_health += 50 * unit[1].health
+            else:
+                defender_health += unit[1].health
+
+        score = (
+            (5 * virus_number) / virus_reach
+            + (2 * program_number) / program_reach
+            - 0.001 * defender_health
+        )
+        return score
+
+    # Heuristic e2 - Takes into account the health of all units, weighted by importance
+    def heuristic_e2(self) -> int:
+        return 0
 
     def evaluate(self) -> int:
         """Evaluate the current game state using the provided heuristic."""
         return self.heuristic_e0()
 
     def minimax(self, game, depth, maximizing_player):
-        if depth == 0 or game.is_finished(): #If the search depth is 0 or the game is finished, return an evaluation score
+        if (
+            depth == 0 or game.is_finished()
+        ):  # If the search depth is 0 or the game is finished, return an evaluation score
             return game.evaluate()
-        
+
         if maximizing_player:
             max_eval = float("-inf")
             # For the maximizing player (attacker), find the move with the highest score.
@@ -371,11 +432,11 @@ class Game:
             min_eval = float("inf")
             # For the minimizing player (defender), find the move with the lowest score.
             for child in game.get_children_nodes(Player.Defender):
-                 # Recursively call minimax with the attacker's perspective (maximizing_player=True)
+                # Recursively call minimax with the attacker's perspective (maximizing_player=True)
                 eval = self.minimax(child, depth - 1, True)
                 min_eval = min(min_eval, eval)
             return min_eval
-    
+
     def get_possible_moves(self, player: Player):
         possible_moves = []
         dim = self.dim
@@ -413,6 +474,79 @@ class Game:
                             game_copy.next_turn()
                             children.append(game_copy)
         return (children, move)
+
+    # Method to return the defender's AI's position in the grid system
+    def ai_position(self) -> Coord:
+        mid_position = Coord(2, 2)
+        grid = mid_position.iter_range(2)
+
+        for coord in grid:
+            unit = self.get(coord)
+            if unit and unit.player == Player.Defender and unit.type == UnitType.AI:
+                position = coord
+        return position
+
+    # Method to return the attacker's program positions in the grid system
+    def prog_position(self) -> Iterable[Coord]:
+        mid_position = Coord(2, 2)
+        grid = mid_position.iter_range(2)
+
+        for coord in grid:
+            unit = self.get(coord)
+            if (
+                unit
+                and unit.player == Player.Attacker
+                and unit.type == UnitType.Program
+            ):
+                yield coord
+
+    # Method to return the attacker's virus positions in the grid system
+    def virus_position(self) -> Iterable[Coord]:
+        mid_position = Coord(2, 2)
+        grid = mid_position.iter_range(2)
+
+        for coord in grid:
+            unit = self.get(coord)
+            if unit and unit.type == UnitType.Virus:
+                yield coord
+
+    # The reach returns how easy it is for a unit at coordinate t to get to a unit at coordinate s
+    def reach(self, coord_s: Coord, coord_t: Coord) -> int:
+        reach = 0
+        y_reach = coord_s.row - coord_t.row
+        x_reach = coord_s.col - coord_t.col
+        unit_up = Coord(coord_t.row - 1, coord_t.col)
+        unit_down = Coord(coord_t.row + 1, coord_t.col)
+        unit_left = Coord(coord_t.row, coord_t.col - 1)
+        unit_right = Coord(coord_t.row, coord_t.col + 1)
+
+        # If you must go in a certain direction and that direction is blocked 2 ways, increase the reach (you need more moves to get there)
+        # These checks assume the units blocking you are your own so that you can move them
+        if y_reach < 0 and x_reach < 0 and self.get(unit_up) and self.get(unit_left):
+            reach += 1
+        elif y_reach < 0 and x_reach > 0 and self.get(unit_up) and self.get(unit_right):
+            reach += 1
+        elif (
+            y_reach > 0 and x_reach < 0 and self.get(unit_down) and self.get(unit_left)
+        ):
+            reach += 1
+        elif (
+            y_reach > 0 and x_reach > 0 and self.get(unit_down) and self.get(unit_right)
+        ):
+            reach += 1
+
+        # If any of the adjacent coordinates are enemy units, increase the reach by 1. This means you might have to defeat them first to get
+        # to the AI (like Techs) or that you must go around them
+        if (
+            (self.get(unit_right) and self.get(unit_right).player == Player.Defender)
+            or (self.get(unit_left) and self.get(unit_left).player == Player.Defender)
+            or (self.get(unit_up) and self.get(unit_up).player == Player.Defender)
+            or (self.get(unit_down) and self.get(unit_down).player == Player.Defender)
+        ):
+            reach += 1
+
+        reach += abs(y_reach) + abs(x_reach) + 1
+        return reach
 
     def is_empty(self, coord: Coord) -> bool:
         """Check if contents of a board cell of the game at Coord is empty (must be valid coord)."""
@@ -462,16 +596,21 @@ class Game:
         # Checking that the source coordinate is indeed a unit
         if unit is None or unit.player != self.next_player:
             print(
-                "There is no unit in your source coordinate or you do not own that unit.")
+                "There is no unit in your source coordinate or you do not own that unit."
+            )
             return False
 
         # Checking that the destination coordinate is an adjacent square
         if coords.dst not in adjacentCoords and coords.dst != coords.src:
-            print("Your destination coordinate is not adjacent to the source coordinate.")
+            print(
+                "Your destination coordinate is not adjacent to the source coordinate."
+            )
             return False
 
         # No movement restrictions on Viruses or Tech
-        if unit.type not in [UnitType.Virus, UnitType.Tech] and dst_unit is None: # Those units may still repair or attack in those coordinates
+        if (
+            unit.type not in [UnitType.Virus, UnitType.Tech] and dst_unit is None
+        ):  # Those units may still repair or attack in those coordinates
             # Verifying if the unit is engaged in combat
             for adjacentCoord in adjacentCoords:
                 adjacentUnit = self.get(adjacentCoord)
@@ -480,7 +619,9 @@ class Game:
                     return False
 
             # Validating move depending on the Player type
-            if unit.player == Player.Attacker:  # Attacker's AI, Firewall and Program can only go left or up
+            if (
+                unit.player == Player.Attacker
+            ):  # Attacker's AI, Firewall and Program can only go left or up
                 if coords.dst.col > coords.src.col or coords.dst.row > coords.src.row:
                     print("That unit may only go up or left.")
                     return False
@@ -490,12 +631,18 @@ class Game:
                     return False
 
         # If the move is a repair, checking that a tech is not repairing a virus
-        if dst_unit is not None and dst_unit.player == unit.player and not dst_unit == unit: # Checking if the move is a repair
+        if (
+            dst_unit is not None
+            and dst_unit.player == unit.player
+            and not dst_unit == unit
+        ):  # Checking if the move is a repair
             if unit is UnitType.Tech and dst_unit is UnitType.Virus:
                 print("Your tech cannot repair your virus.")
                 return False
-            
-            if dst_unit.health >= 9: # Checking if the destination unit is alrdy at full health
+
+            if (
+                dst_unit.health >= 9
+            ):  # Checking if the destination unit is alrdy at full health
                 print("That unit is at full health. You can't repair it.")
                 return False
 
@@ -509,7 +656,9 @@ class Game:
             src_unit = self.get(coords.src)
             dst_unit = self.get(coords.dst)
             adjacentCoords = Coord.iter_adjacent(coords.src)
-            diagonalCoords = Coord.iter_diagonal(coords.src) # Generating adjacent but diagonal coordinates for self-destruct
+            diagonalCoords = Coord.iter_diagonal(
+                coords.src
+            )  # Generating adjacent but diagonal coordinates for self-destruct
 
             # Empty destination -> Perform the movement, stop the method
             if not dst_unit:
@@ -534,9 +683,10 @@ class Game:
 
             # Enemy unit at destination -> Perform the attack
             elif dst_unit and dst_unit.player != src_unit.player:
-                dmg = src_unit.damage_amount(dst_unit)
-                self.mod_health(coords.src, -dmg)
-                self.mod_health(coords.dst, -dmg)
+                t_dmg = src_unit.damage_amount(dst_unit)
+                s_dmg = dst_unit.damage_amount(src_unit)
+                self.mod_health(coords.src, -s_dmg)
+                self.mod_health(coords.dst, -t_dmg)
 
             # Team unit at destination -> Perform the repair
             elif dst_unit and dst_unit.player == src_unit.player:
@@ -617,12 +767,17 @@ class Game:
     def read_move(self) -> CoordPair:
         """Read a move from keyboard and return as a CoordPair."""
         while True:
-            s = input(F'Player {self.next_player.name}, enter your move: ')
+            print(self.heuristic_e1())
+            s = input(f"Player {self.next_player.name}, enter your move: ")
             coords = CoordPair.from_string(s)
-            if coords is not None and self.is_valid_coord(coords.src) and self.is_valid_coord(coords.dst):
+            if (
+                coords is not None
+                and self.is_valid_coord(coords.src)
+                and self.is_valid_coord(coords.dst)
+            ):
                 return coords
             else:
-                print('Invalid coordinates! Try again.')
+                print("Invalid coordinates! Try again.")
 
     def human_turn(self):
         """Human player plays a move (or get via broker)."""
@@ -632,7 +787,7 @@ class Game:
                 mv = self.get_move_from_broker()
                 if mv is not None:
                     (success, result) = self.perform_move(mv)
-                    print(f"Broker {self.next_player.name}: ", end='')
+                    print(f"Broker {self.next_player.name}: ", end="")
                     print(result)
                     if success:
                         self.next_turn()
@@ -643,7 +798,7 @@ class Game:
                 mv = self.read_move()
                 (success, result) = self.perform_move(mv)
                 if success:
-                    print(f"Player {self.next_player.name}: ", end='')
+                    print(f"Player {self.next_player.name}: ", end="")
                     print(result)
                     self.write_turn_to_file(mv)
                     self.next_turn()
@@ -657,7 +812,7 @@ class Game:
         if mv is not None:
             (success, result) = self.perform_move(mv)
             if success:
-                print(f"Computer {self.next_player.name}: ", end='')
+                print(f"Computer {self.next_player.name}: ", end="")
                 print(result)
                 self.next_turn()
         return mv
@@ -675,7 +830,10 @@ class Game:
 
     def has_winner(self) -> Player | None:
         """Check if the game is over and returns winner"""
-        if self.options.max_turns is not None and self.turns_played >= self.options.max_turns:
+        if (
+            self.options.max_turns is not None
+            and self.turns_played >= self.options.max_turns
+        ):
             return Player.Defender
         elif self._attacker_has_ai:
             if self._defender_has_ai:
@@ -688,7 +846,7 @@ class Game:
     def move_candidates(self) -> Iterable[CoordPair]:
         """Generate valid move candidates for the next player."""
         move = CoordPair()
-        for (src, _) in self.player_units(self.next_player):
+        for src, _ in self.player_units(self.next_player):
             move.src = src
             for dst in src.iter_adjacent():
                 move.dst = dst
@@ -713,20 +871,19 @@ class Game:
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {self.evaluate()}")
-        #print(f"Average recursive depth: {avg_depth:0.1f}") we don't need this
-        print(f"Evals per depth: ", end='')
+        # print(f"Average recursive depth: {avg_depth:0.1f}") we don't need this
+        print(f"Evals per depth: ", end="")
         for k in sorted(self.stats.evaluations_per_depth.keys()):
-            print(f"{k}:{self.stats.evaluations_per_depth[k]} ", end='')
+            print(f"{k}:{self.stats.evaluations_per_depth[k]} ", end="")
         print()
         total_evals = sum(self.stats.evaluations_per_depth.values())
         if self.stats.total_seconds > 0:
-            print(
-                f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
+            print(f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
 
         best_move = None
-        max_eval = float('-inf')
-   
+        max_eval = float("-inf")
+
         for child in game.get_children_nodes(Player.Attacker):
             eval = self.minimax(child, game.options.max_depth, False)
             if eval > max_eval:
@@ -741,16 +898,21 @@ class Game:
         data = {
             "from": {"row": move.src.row, "col": move.src.col},
             "to": {"row": move.dst.row, "col": move.dst.col},
-            "turn": self.turns_played
+            "turn": self.turns_played,
         }
         try:
             r = requests.post(self.options.broker, json=data)
-            if r.status_code == 200 and r.json()['success'] and r.json()['data'] == data:
+            if (
+                r.status_code == 200
+                and r.json()["success"]
+                and r.json()["data"] == data
+            ):
                 # print(f"Sent move to broker: {move}")
                 pass
             else:
                 print(
-                    f"Broker error: status code: {r.status_code}, response: {r.json()}")
+                    f"Broker error: status code: {r.status_code}, response: {r.json()}"
+                )
         except Exception as error:
             print(f"Broker error: {error}")
 
@@ -758,16 +920,16 @@ class Game:
         """Get a move from the game broker."""
         if self.options.broker is None:
             return None
-        headers = {'Accept': 'application/json'}
+        headers = {"Accept": "application/json"}
         try:
             r = requests.get(self.options.broker, headers=headers)
-            if r.status_code == 200 and r.json()['success']:
-                data = r.json()['data']
+            if r.status_code == 200 and r.json()["success"]:
+                data = r.json()["data"]
                 if data is not None:
-                    if data['turn'] == self.turns_played+1:
+                    if data["turn"] == self.turns_played + 1:
                         move = CoordPair(
-                            Coord(data['from']['row'], data['from']['col']),
-                            Coord(data['to']['row'], data['to']['col'])
+                            Coord(data["from"]["row"], data["from"]["col"]),
+                            Coord(data["to"]["row"], data["to"]["col"]),
                         )
                         print(f"Got move from broker: {move}")
                         return move
@@ -780,10 +942,12 @@ class Game:
                     pass
             else:
                 print(
-                    f"Broker error: status code: {r.status_code}, response: {r.json()}")
+                    f"Broker error: status code: {r.status_code}, response: {r.json()}"
+                )
         except Exception as error:
             print(f"Broker error: {error}")
         return None
+
 
 ##############################################################################################################
 
@@ -791,13 +955,17 @@ class Game:
 def main():
     # parse command line arguments
     parser = argparse.ArgumentParser(
-        prog='ai_wargame',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--max_depth', type=int, help='maximum search depth')
-    parser.add_argument('--max_time', type=float, help='maximum search time')
-    parser.add_argument('--game_type', type=str, default="manual",
-                        help='game type: auto|attacker|defender|manual')
-    parser.add_argument('--broker', type=str, help='play via a game broker')
+        prog="ai_wargame", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("--max_depth", type=int, help="maximum search depth")
+    parser.add_argument("--max_time", type=float, help="maximum search time")
+    parser.add_argument(
+        "--game_type",
+        type=str,
+        default="manual",
+        help="game type: auto|attacker|defender|manual",
+    )
+    parser.add_argument("--broker", type=str, help="play via a game broker")
     args = parser.parse_args()
 
     # parse the game type
@@ -851,9 +1019,15 @@ def main():
 
         if game.options.game_type == GameType.AttackerVsDefender:
             game.human_turn()
-        elif game.options.game_type == GameType.AttackerVsComp and game.next_player == Player.Attacker:
+        elif (
+            game.options.game_type == GameType.AttackerVsComp
+            and game.next_player == Player.Attacker
+        ):
             game.human_turn()
-        elif game.options.game_type == GameType.CompVsDefender and game.next_player == Player.Defender:
+        elif (
+            game.options.game_type == GameType.CompVsDefender
+            and game.next_player == Player.Defender
+        ):
             game.human_turn()
         else:
             player = game.next_player
@@ -864,8 +1038,9 @@ def main():
                 print("Computer doesn't know what to do!!!")
                 exit(1)
 
+
 ##############################################################################################################
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
