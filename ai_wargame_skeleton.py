@@ -399,7 +399,7 @@ class Game:
                         if game_copy.perform_move(move):
                             game_copy.next_turn()
                             children.append(game_copy)
-        return children
+        return (children, move)
 
     def is_empty(self, coord: Coord) -> bool:
         """Check if contents of a board cell of the game at Coord is empty (must be valid coord)."""
