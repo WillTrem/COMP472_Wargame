@@ -381,6 +381,26 @@ class Game:
                             possible_moves.append(move)
         return possible_moves
 
+    def get_children_nodes(self, player: Player):
+        children = []
+        dim = self.dim
+        # Iterates over every cell
+        for row in range(dim):
+            for col in range(dim):
+                coord = Coord(row, col)
+                unit = self.get(coord)
+                # If the player owns the unit (i.e. can use it to make a move)
+                if unit is not None and unit.player == player:
+                    adjacentCoords = Coord.iter_adjacent(coord)
+                    # Iterates over the possible moves of the current unit to validate them
+                    for adjacentCoord in adjacentCoords:
+                        game_copy = self.clone()
+                        move = CoordPair(coord, adjacentCoord)
+                        if game_copy.perform_move(move):
+                            game_copy.next_turn()
+                            children.append(game_copy)
+        return children
+
     def is_empty(self, coord: Coord) -> bool:
         """Check if contents of a board cell of the game at Coord is empty (must be valid coord)."""
         return self.board[coord.row][coord.col] is None
