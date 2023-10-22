@@ -355,14 +355,43 @@ class Game:
         """Evaluate the current game state using the provided heuristic."""
         return self.heuristic_e0()
 
-    def minimax(self, depth, maximizing_player, alpha, beta):
-        # If we've reached a leaf node or the game is finished, evaluate the current state.
-        if depth == 0 or self.is_finished():
-            return self.evaluate(), None
+    def minimax(self, game, depth, maximizing_player):
+        if depth == 0 or game.is_finished(): #If the search depth is 0 or the game is finished, return an evaluation score
+            return game.evaluate()
+        
+        if maximizing_player:
+            max_eval = float("-inf")
+            # For the maximizing player (attacker), find the move with the highest score.
+            for move in game.get_possible_moves():
+                game_copy = game.clone()
+                game_copy.perform_move(move)
+                # Recursively call minimax with the defender's perspective (maximizing_player=False)
+                eval = self.minimax(game_copy, depth - 1, False)
+                max_eval = max(max_eval, eval)
+            return max_eval
+        else:
+            min_eval = float("inf")
+            # For the minimizing player (defender), find the move with the lowest score.
+            for move in game.get_possible_moves():
+                game_copy = game.clone()
+                game_copy.perform_move(move)
+                 # Recursively call minimax with the attacker's perspective (maximizing_player=True)
+                eval = self.minimax(game_copy, depth - 1, True)
+                min_eval = min(min_eval, eval)
+            return min_eval
 
-        # if maximizing_player:
-
-        # else: defender's turn (minimizing player)
+    def best_move(self, game, depth):
+        best_score = float("-inf")
+        best_move = None
+        for move in game.get_possible_moves():
+            game_copy = copy.deepcopy(game)
+            game_copy.perform_move(move)
+            score = self.minimax(game_copy, depth, False)
+            if score > best_score:
+                best_score = score
+                best_move = move
+        return best_move
+    
     def get_possible_moves(self, player: Player):
         possible_moves = []
         dim = self.dim
