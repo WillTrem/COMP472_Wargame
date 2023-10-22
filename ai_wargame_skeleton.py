@@ -362,21 +362,17 @@ class Game:
         if maximizing_player:
             max_eval = float("-inf")
             # For the maximizing player (attacker), find the move with the highest score.
-            for move in game.get_possible_moves():
-                game_copy = game.clone()
-                game_copy.perform_move(move)
+            for child in game.get_children_nodes(Player.Attacker):
                 # Recursively call minimax with the defender's perspective (maximizing_player=False)
-                eval = self.minimax(game_copy, depth - 1, False)
+                eval = self.minimax(child, depth - 1, False)
                 max_eval = max(max_eval, eval)
             return max_eval
         else:
             min_eval = float("inf")
             # For the minimizing player (defender), find the move with the lowest score.
-            for move in game.get_possible_moves():
-                game_copy = game.clone()
-                game_copy.perform_move(move)
+            for child in game.get_children_nodes(Player.Defender):
                  # Recursively call minimax with the attacker's perspective (maximizing_player=True)
-                eval = self.minimax(game_copy, depth - 1, True)
+                eval = self.minimax(child, depth - 1, True)
                 min_eval = min(min_eval, eval)
             return min_eval
 
