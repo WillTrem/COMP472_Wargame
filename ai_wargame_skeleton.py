@@ -375,18 +375,6 @@ class Game:
                 eval = self.minimax(child, depth - 1, True)
                 min_eval = min(min_eval, eval)
             return min_eval
-
-    def best_move(self, game, depth):
-        best_score = float("-inf")
-        best_move = None
-        for move in game.get_possible_moves():
-            game_copy = copy.deepcopy(game)
-            game_copy.perform_move(move)
-            score = self.minimax(game_copy, depth, False)
-            if score > best_score:
-                best_score = score
-                best_move = move
-        return best_move
     
     def get_possible_moves(self, player: Player):
         possible_moves = []
@@ -718,14 +706,14 @@ class Game:
         else:
             return (0, None, 0)
 
-    def suggest_move(self) -> CoordPair | None:
+    def suggest_move(self, game) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
         (score, move, avg_depth) = self.random_move()
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {self.evaluate()}")
-        print(f"Average recursive depth: {avg_depth:0.1f}")
+        #print(f"Average recursive depth: {avg_depth:0.1f}") we don't need this
         print(f"Evals per depth: ", end='')
         for k in sorted(self.stats.evaluations_per_depth.keys()):
             print(f"{k}:{self.stats.evaluations_per_depth[k]} ", end='')
@@ -735,7 +723,16 @@ class Game:
             print(
                 f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
-        return move
+
+        best_move = None
+        max_eval = float('-inf')
+   
+        for child in game.get_children_nodes(Player.Attacker):
+            eval = self.minimax(child, game.options.max_depth, False)
+            if eval > max_eval:
+                max_eval = eval
+                best_move = move
+        return best_move
 
     def post_move_to_broker(self, move: CoordPair):
         """Send a move to the game broker."""
