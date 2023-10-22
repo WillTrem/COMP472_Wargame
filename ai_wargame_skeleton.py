@@ -350,20 +350,37 @@ class Game:
 
         return (attacker_vp + attacker_tp + attacker_fp + attacker_pp + attacker_aip) - \
                (defender_vp + defender_tp + defender_fp + defender_pp + defender_aip)
-    
+
     def evaluate(self) -> int:
         """Evaluate the current game state using the provided heuristic."""
         return self.heuristic_e0()
-    
+
     def minimax(self, depth, maximizing_player, alpha, beta):
-        if depth == 0 or self.is_finished(): # If we've reached a leaf node or the game is finished, evaluate the current state.
+        # If we've reached a leaf node or the game is finished, evaluate the current state.
+        if depth == 0 or self.is_finished():
             return self.evaluate(), None
 
-        #if maximizing_player:
-    
-        #else: defender's turn (minimizing player)
-    
-    
+        # if maximizing_player:
+
+        # else: defender's turn (minimizing player)
+    def get_possible_moves(self, player: Player):
+        possible_moves = []
+        dim = self.dim
+        # Iterates over every cell
+        for row in range(dim):
+            for col in range(dim):
+                coord = Coord(row, col)
+                unit = self.get(coord)
+                # If the player owns the unit (i.e. can use it to make a move)
+                if unit is not None and unit.player == player:
+                    adjacentCoords = Coord.iter_adjacent(coord)
+                    # Iterates over the possible moves of the current unit to validate them
+                    for adjacentCoord in adjacentCoords:
+                        move = CoordPair(coord, adjacentCoord)
+                        if self.is_valid_move(move):
+                            possible_moves.append(move)
+        return possible_moves
+
     def is_empty(self, coord: Coord) -> bool:
         """Check if contents of a board cell of the game at Coord is empty (must be valid coord)."""
         return self.board[coord.row][coord.col] is None
