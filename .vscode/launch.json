@@ -11,7 +11,7 @@
 			"program": "${file}",
 			"console": "integratedTerminal",
 			"justMyCode": true,
-			"args": ["--game_type", "auto", "--alpha_beta", "False"]
+			"args": ["--game_type", "auto", "--alpha_beta", "True"]
 		}
 	]
 }

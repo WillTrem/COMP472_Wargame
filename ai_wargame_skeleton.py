@@ -464,17 +464,17 @@ class Game:
         if maximizing_player:
             max_eval = float("-inf")
             # For the maximizing player (attacker), find the move with the highest score.
-            for (child, move) in game.get_children_nodes(Player.Attacker):
+            for (child, move) in self.get_children_nodes(Player.Attacker):
                 # Recursively call minimax with the defender's perspective (maximizing_player=False)
-                eval = self.minimax(child, depth - 1, False)
+                eval = child.minimax(depth - 1, False)
                 max_eval = max(max_eval, eval)
             return max_eval
         else:
             min_eval = float("inf")
             # For the minimizing player (defender), find the move with the lowest score.
-            for (child, move) in game.get_children_nodes(Player.Defender):
+            for (child, move) in self.get_children_nodes(Player.Defender):
                 # Recursively call minimax with the attacker's perspective (maximizing_player=True)
-                eval = self.minimax(child, depth - 1, True)
+                eval = child.minimax(depth - 1, True)
                 min_eval = min(min_eval, eval)
             return min_eval
 
@@ -498,9 +498,10 @@ class Game:
                 if value > maxValue:
                     maxValue = value
                     maxMove = move
-                alpha = max(alpha, maxValue)
-                if beta <= alpha:
-                    break  # Alpha Pruning
+                if (self.options.alpha_beta):
+                    alpha = max(alpha, maxValue)
+                    if beta <= alpha:
+                        break  # Alpha Pruning
             return (maxValue, maxMove)
         else:  # We try to Minimize the Attacker's score
             minValue = math.inf
@@ -513,9 +514,10 @@ class Game:
                 if value <= minValue:
                     minValue = value
                     minMove = move
-                beta = min(beta, minValue)
-                if beta <= alpha:
-                    break  # Beta Pruning
+                if (self.options.alpha_beta):
+                    beta = min(beta, minValue)
+                    if beta <= alpha:
+                        break  # Beta Pruning
             return (minValue, minMove)
 
     def get_children_nodes(self, player: Player):
@@ -884,22 +886,22 @@ class Game:
         elapse_time = (datetime.now()-start_time).total_seconds()
         return mv, elapse_time
 
-    def timeout(self):
-        process = multiprocessing.Process(target=self.computer_turn, args=())
-        process.start()
-        process.join(timeout=self.options.max_time)
+    # def timeout(self, target):
+    #     process = multiprocessing.Process(target=target, args=())
+    #     process.start()
+    #     process.join(timeout=self.options.max_time)
 
-        if process.is_alive():
-            # If the AI calculation process is still running after the timeout, terminate it
-            process.terminate()
-            print("AI move calculation timed out.")
-            return None
-        else:
-            mv, elapsed_time = process.exitcode
+    #     if process.is_alive():
+    #         # If the AI calculation process is still running after the timeout, terminate it
+    #         process.terminate()
+    #         print("AI move calculation timed out.")
+    #         return None
+    #     else:
+    #         mv, elapsed_time = process.exitcode
 
-        if mv is None:
-            print(f"AI move calculation took {elapsed_time:.2f} seconds.")
-        return mv
+    #     if mv is None:
+    #         print(f"AI move calculation took {elapsed_time:.2f} seconds.")
+    #     return mv
 
     def player_units(self, player: Player) -> Iterable[Tuple[Coord, Unit]]:
         """Iterates over all units belonging to a player."""
@@ -951,18 +953,24 @@ class Game:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
         # (score, move) = self.random_move()  # Removed avg_depth
-        if self.options.alpha_beta:
-            (score, move) = self.alpha_beta(self.options.max_depth, -
-                                            (math.inf), math.inf)  # Removed avg_depth
-        else:
-            score = float("-inf")
-            for (child, child_move) in self.get_children_nodes(self.next_player):
-                eval = self.minimax(child, self.options.max_depth-1, False)
-                if eval > max_eval:
-                    max_eval = eval
-                    move = child_move
+        # if self.options.alpha_beta:
+        (score, move) = self.alpha_beta(self.options.max_depth, -
+                                        (math.inf), math.inf)  # Removed avg_depth
+        # else:
+        #     score = float("-inf")
+        #     for (child, child_move) in self.get_children_nodes(self.next_player):
+        #         eval = self.minimax(self.options.max_depth-1, False)
+        #         if eval > score:
+        #             score = eval
+        #             move = child_move
 
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
+        if (elapsed_seconds > self.options.max_time):
+            print(
+                f"{self.next_player.name} has taken too much time, {self.next_player.next().name} wins!")
+            self.file.write(
+                f"\n{self.next_player.next().name} wins in {self.turns_played}")
+            self.file.close()
         self.stats.total_seconds += elapsed_seconds
         print(f"Suggested move: {move} with score of {score} ")
 
