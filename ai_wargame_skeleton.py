@@ -436,9 +436,13 @@ class Game:
 
         return 0.001 * attacker_health - 0.01 * defender_health
 
-    def evaluate(self) -> int:
-        """Evaluate the current game state using the provided heuristic."""
-        return self.heuristic_e0()
+    def evaluate(self, eval_func):
+        if eval_func == "e1":
+            return self.evaluate_e1()
+        elif eval_func == "e2":
+            return self.evaluate_e2()
+        else:
+            return self.evaluate_e0()
 
     def minimax(self, game, depth, maximizing_player):
         if (
@@ -986,7 +990,7 @@ def main():
     parser.add_argument(
         "--game_type",
         type=str,
-        default="",
+        default="manual",
         help="game type: auto|attacker|defender|manual",
     )
     parser.add_argument("--broker", type=str, help="play via a game broker")
