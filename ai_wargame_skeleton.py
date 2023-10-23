@@ -445,7 +445,7 @@ class Game:
 
         return 0.001 * attacker_health - 0.01 * defender_health
 
-    def evaluate(self, eval_func):
+    def evaluate(self, eval_func=None):
         if eval_func == "e1":
             return self.heuristic_e1()
         elif eval_func == "e2":
@@ -479,70 +479,45 @@ class Game:
     def alpha_beta(self, depth: int, alpha: float, beta: float):
 
         if depth == 0 or self.is_finished():
-            return (self.evaluate("e2"), None)
+            return (self.evaluate(), None)
 
         # Generate all possible moves
         children = self.get_children_nodes(self.next_player)
         # TODO: find branching factor
         if self.next_player == Player.Attacker:  # We try to Maximize the Attacker's score
-            value = -(math.inf)
+            maxValue = -(math.inf)
+            maxMove = None
             # Iterate over all the children
             for (game_copy, move) in children:
-                value = max(value, game_copy.alpha_beta(
-                    depth-1, alpha, beta)[0])
-                alpha = max(alpha, value)
+                if maxMove is None:
+                    maxMove = move
+                value = game_copy.alpha_beta(depth-1, alpha, beta)[0]
+                maxValue = max(value, maxValue)
+                if value > maxValue:
+                    maxValue = value
+                    maxMove = move
+                alpha = max(alpha, maxValue)
                 if beta <= alpha:
                     break  # Alpha Pruning
-            # print(f"max: {value} {move}")
-            return (value, move)
+            return (maxValue, maxMove)
         else:  # We try to Minimize the Attacker's score
-            value = math.inf
+            minValue = math.inf
+            minMove = None
             # Iterate over all the children
             for (game_copy, move) in children:
-                value = min(value, game_copy.alpha_beta(
-                    depth-1, alpha, beta)[0])
-                beta = min(beta, value)
+                if minMove is None:
+                    minMove = move
+                value = game_copy.alpha_beta(depth-1, alpha, beta)[0]
+                if value <= minValue:
+                    minValue = value
+                    minMove = move
+                beta = min(beta, minValue)
                 if beta <= alpha:
                     break  # Beta Pruning
-            # print(f"min: {value} {move}")
-            return (value, move)
-
-    def get_possible_moves(self, player: Player):
-        possible_moves = []
-        dim = self.dim
-        # Iterates over every cell
-        for row in range(dim):
-            for col in range(dim):
-                coord = Coord(row, col)
-                unit = self.get(coord)
-                # If the player owns the unit (i.e. can use it to make a move)
-                if unit is not None and unit.player == player:
-                    adjacentCoords = Coord.iter_adjacent(coord)
-                    # Iterates over the possible moves of the current unit to validate them
-                    for adjacentCoord in adjacentCoords:
-                        move = CoordPair(coord, adjacentCoord)
-                        if self.is_valid_move(move):
-                            possible_moves.append(move)
-        return possible_moves
+            return (minValue, minMove)
 
     def get_children_nodes(self, player: Player):
         children = []
-        # dim = self.dim
-        # # Iterates over every cell
-        # for row in range(dim):
-        #     for col in range(dim):
-        #         coord = Coord(row, col)
-        #         unit = self.get(coord)
-        #         # If the player owns the unit (i.e. can use it to make a move)
-        #         if unit is not None and unit.player == player:
-        #             adjacentCoords = Coord.iter_adjacent(coord)
-        #             # Iterates over the possible moves of the current unit to validate them
-        #             for adjacentCoord in adjacentCoords:
-        #                 game_copy = self.clone()
-        #                 move = CoordPair(coord, adjacentCoord)
-        #                 if game_copy.perform_move(move):
-        #                     game_copy.next_turn()
-        #                     children.append(game_copy)
         for (coord, unit) in self.player_units(player):
             adjacentCoords = Coord.iter_adjacent(coord)
             # Iterates over the possible moves of the current unit to validate them
@@ -955,13 +930,13 @@ class Game:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
         # (score, move) = self.random_move()  # Removed avg_depth
-        (score, move) = self.alpha_beta(self.options.max_depth, -
+        (score, move) = self.alpha_beta(self.options.min_depth, -
                                         (math.inf), math.inf)  # Removed avg_depth
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Suggested move: {move} with score of {score} ")
 
-        print(f"Heuristic score: {self.evaluate('e2')}")
+        print(f"Heuristic score: {self.evaluate()}")
         # print(f"Average recursive depth: {avg_depth:0.1f}") we don't need this
         print(f"Evals per depth: ", end="")
         for k in sorted(self.stats.evaluations_per_depth.keys()):
