@@ -455,16 +455,16 @@ class Game:
         else:
             return self.heuristic_e0()
 
-    def minimax(self, game, depth, maximizing_player):
-        if (
-            depth == 0 or game.is_finished()
-        ):  # If the search depth is 0 or the game is finished, return an evaluation score
-            return game.evaluate()
+    def minimax(self, depth, maximizing_player):
+        
+        if depth == 0 or self.is_finished():
+          # If the search depth is 0 or the game is finished, return an evaluation score
+            return self.evaluate()
 
         if maximizing_player:
             max_eval = float("-inf")
             # For the maximizing player (attacker), find the move with the highest score.
-            for child in game.get_children_nodes(Player.Attacker):
+            for child in self.get_children_nodes(Player.Attacker):
                 # Recursively call minimax with the defender's perspective (maximizing_player=False)
                 eval = self.minimax(child, depth - 1, False)
                 max_eval = max(max_eval, eval)
@@ -472,7 +472,7 @@ class Game:
         else:
             min_eval = float("inf")
             # For the minimizing player (defender), find the move with the lowest score.
-            for child in game.get_children_nodes(Player.Defender):
+            for child in self.get_children_nodes(Player.Defender):
                 # Recursively call minimax with the attacker's perspective (maximizing_player=True)
                 eval = self.minimax(child, depth - 1, True)
                 min_eval = min(min_eval, eval)
