@@ -253,6 +253,8 @@ class Options:
     max_turns: int | None = None
     randomize_moves: bool = True
     broker: str | None = None
+    heuristic: str = "e0"
+    depth: int = max_depth
 
 
 ##############################################################################################################
@@ -264,6 +266,10 @@ class Stats:
 
     evaluations_per_depth: dict[int, int] = field(default_factory=dict)
     total_seconds: float = 0.0
+    branching_factor: float = 0.0
+    cumulative_evals: int = 0
+    total_children: int = 0
+    total_parents: int = 0
 
 
 ##############################################################################################################
@@ -293,19 +299,23 @@ class Game:
         self.file.write(f"Alpha-beta: {self.options.alpha_beta}\n")
         # TODO: make it look better
         self.file.write(f"Play mode: {self.options.game_type.name}\n")
-        # TODO: print heuristic if one of the players is AI
-
+        if (self.options.game_type.value > 0):
+            self.file.write(f"Heuristic chosen: {self.options.heuristic}")
         self.file.write("\n---INITIAL BOARD CONFIG---\n")
         self.file.write(self.to_string())
         self.file.write("\n---GAME TRACE---\n")
 
-    def write_turn_to_file(self, move: CoordPair):
+    def write_turn_to_file(self, move: CoordPair, time=None, score=None):
         """Writes the current turn to the output file"""
         self.file.write(f"\nTurn #{self.turns_played + 1}\n")
         self.file.write(f"Player: {self.next_player.name}\n")
         self.file.write(f"Action taken: {move.to_string()}\n")
+
         # TODO: Write AI time for the action
         # TODO: Write AI heuristic score of the resulting board
+        if time is not None and score is not None:
+            self.file.write(f"Time for this action: {time}")
+            self.file.write(f"Heuristic score: {score}")
         self.file.write(
             f"New board configuration: \n{self.board_to_string()}\n")
         # TODO: AI cumulative information about the game so far
@@ -481,11 +491,20 @@ class Game:
     def alpha_beta(self, depth: int, alpha: float, beta: float):
 
         if depth == 0 or self.is_finished():
-            return (self.evaluate(), None)
+            key = (
+                self.options.depth - depth + 1)
+            if key in self.stats.evaluations_per_depth.keys():
+                self.stats.evaluations_per_depth[key] += 1
+            else:
+                self.stats.evaluations_per_depth[key] = 1
+            self.stats.cumulative_evals += 1
+            return (self.evaluate(self.options.heuristic), None)
+
+        children = self.get_children_nodes(self.next_player)
+        self.stats.total_children = len(children)
+        self.stats.total_parents += 1
 
         # Generate all possible moves
-        children = self.get_children_nodes(self.next_player)
-        # TODO: find branching factor
         if self.next_player == Player.Attacker:  # We try to Maximize the Attacker's score
             maxValue = -(math.inf)
             maxMove = None
@@ -954,7 +973,7 @@ class Game:
         start_time = datetime.now()
         # (score, move) = self.random_move()  # Removed avg_depth
         # if self.options.alpha_beta:
-        (score, move) = self.alpha_beta(self.options.max_depth, -
+        (score, move) = self.alpha_beta(self.options.depth, -
                                         (math.inf), math.inf)  # Removed avg_depth
         # else:
         #     score = float("-inf")
@@ -974,18 +993,28 @@ class Game:
         self.stats.total_seconds += elapsed_seconds
         print(f"Suggested move: {move} with score of {score} ")
 
-        print(f"Heuristic score: {self.evaluate()}")
+        print(f"Heuristic score: {score}")
+        self.write_turn_to_file(move, elapsed_seconds, score)
         # print(f"Average recursive depth: {avg_depth:0.1f}") we don't need this
         print(f"Evals per depth: ", end="")
+        total_evals = sum(self.stats.evaluations_per_depth.values())
+        self.file.write(f"Cumulative evals: {total_evals}\n")
+        self.file.write("Cumulative evals per depth:\n")
         for k in sorted(self.stats.evaluations_per_depth.keys()):
             print(f"{k}:{self.stats.evaluations_per_depth[k]} ", end="")
+            self.file.write(
+                f"{k}:{self.stats.evaluations_per_depth[k]}\n")
+            self.file.write(
+                f"    percentage: {self.stats.evaluations_per_depth[k]/total_evals * 100}%\n")
         print()
-        total_evals = sum(self.stats.evaluations_per_depth.values())
+
         if self.stats.total_seconds > 0:
             print(
                 f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
-
+        # branching factor
+        self.file.write(
+            f"Branching factor: {self.stats.total_children/self.stats.total_parents}\n")
         return move
 
     def post_move_to_broker(self, move: CoordPair):
