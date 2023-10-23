@@ -304,7 +304,8 @@ class Game:
         self.file.write(f"Action taken: {move.to_string()}\n")
         # TODO: Write AI time for the action
         # TODO: Write AI heuristic score of the resulting board
-        self.file.write(f"New board configuration: \n{self.board_to_string()}\n")
+        self.file.write(
+            f"New board configuration: \n{self.board_to_string()}\n")
         # TODO: AI cumulative information about the game so far
 
     def __post_init__(self):
@@ -315,16 +316,24 @@ class Game:
         self.set(Coord(0, 0), Unit(player=Player.Defender, type=UnitType.AI))
         self.set(Coord(1, 0), Unit(player=Player.Defender, type=UnitType.Tech))
         self.set(Coord(0, 1), Unit(player=Player.Defender, type=UnitType.Tech))
-        self.set(Coord(2, 0), Unit(player=Player.Defender, type=UnitType.Firewall))
-        self.set(Coord(0, 2), Unit(player=Player.Defender, type=UnitType.Firewall))
-        self.set(Coord(1, 1), Unit(player=Player.Defender, type=UnitType.Program))
+        self.set(Coord(2, 0), Unit(
+            player=Player.Defender, type=UnitType.Firewall))
+        self.set(Coord(0, 2), Unit(
+            player=Player.Defender, type=UnitType.Firewall))
+        self.set(Coord(1, 1), Unit(
+            player=Player.Defender, type=UnitType.Program))
         self.set(Coord(md, md), Unit(player=Player.Attacker, type=UnitType.AI))
-        self.set(Coord(md - 1, md), Unit(player=Player.Attacker, type=UnitType.Virus))
-        self.set(Coord(md, md - 1), Unit(player=Player.Attacker, type=UnitType.Virus))
-        self.set(Coord(md - 2, md), Unit(player=Player.Attacker, type=UnitType.Program))
-        self.set(Coord(md, md - 2), Unit(player=Player.Attacker, type=UnitType.Program))
+        self.set(Coord(md - 1, md),
+                 Unit(player=Player.Attacker, type=UnitType.Virus))
+        self.set(Coord(md, md - 1),
+                 Unit(player=Player.Attacker, type=UnitType.Virus))
+        self.set(Coord(md - 2, md),
+                 Unit(player=Player.Attacker, type=UnitType.Program))
+        self.set(Coord(md, md - 2),
+                 Unit(player=Player.Attacker, type=UnitType.Program))
         self.set(
-            Coord(md - 1, md - 1), Unit(player=Player.Attacker, type=UnitType.Firewall)
+            Coord(md - 1, md - 1), Unit(player=Player.Attacker,
+                                        type=UnitType.Firewall)
         )
 
     def clone(self) -> Game:
@@ -438,11 +447,11 @@ class Game:
 
     def evaluate(self, eval_func):
         if eval_func == "e1":
-            return self.evaluate_e1()
+            return self.heuristic_e1()
         elif eval_func == "e2":
-            return self.evaluate_e2()
+            return self.heuristic_e2()
         else:
-            return self.evaluate_e0()
+            return self.heuristic_e0()
 
     def minimax(self, game, depth, maximizing_player):
         if (
@@ -467,6 +476,37 @@ class Game:
                 min_eval = min(min_eval, eval)
             return min_eval
 
+    def alpha_beta(self, depth: int, alpha: float, beta: float):
+
+        if depth == 0 or self.is_finished():
+            return (self.evaluate("e2"), None)
+
+        # Generate all possible moves
+        children = self.get_children_nodes(self.next_player)
+        # TODO: find branching factor
+        if self.next_player == Player.Attacker:  # We try to Maximize the Attacker's score
+            value = -(math.inf)
+            # Iterate over all the children
+            for (game_copy, move) in children:
+                value = max(value, game_copy.alpha_beta(
+                    depth-1, alpha, beta)[0])
+                alpha = max(alpha, value)
+                if beta <= alpha:
+                    break  # Alpha Pruning
+            # print(f"max: {value} {move}")
+            return (value, move)
+        else:  # We try to Minimize the Attacker's score
+            value = math.inf
+            # Iterate over all the children
+            for (game_copy, move) in children:
+                value = min(value, game_copy.alpha_beta(
+                    depth-1, alpha, beta)[0])
+                beta = min(beta, value)
+                if beta <= alpha:
+                    break  # Beta Pruning
+            # print(f"min: {value} {move}")
+            return (value, move)
+
     def get_possible_moves(self, player: Player):
         possible_moves = []
         dim = self.dim
@@ -487,23 +527,37 @@ class Game:
 
     def get_children_nodes(self, player: Player):
         children = []
-        dim = self.dim
-        # Iterates over every cell
-        for row in range(dim):
-            for col in range(dim):
-                coord = Coord(row, col)
-                unit = self.get(coord)
-                # If the player owns the unit (i.e. can use it to make a move)
-                if unit is not None and unit.player == player:
-                    adjacentCoords = Coord.iter_adjacent(coord)
-                    # Iterates over the possible moves of the current unit to validate them
-                    for adjacentCoord in adjacentCoords:
-                        game_copy = self.clone()
-                        move = CoordPair(coord, adjacentCoord)
-                        if game_copy.perform_move(move):
-                            game_copy.next_turn()
-                            children.append(game_copy)
-        return (children, move)
+        # dim = self.dim
+        # # Iterates over every cell
+        # for row in range(dim):
+        #     for col in range(dim):
+        #         coord = Coord(row, col)
+        #         unit = self.get(coord)
+        #         # If the player owns the unit (i.e. can use it to make a move)
+        #         if unit is not None and unit.player == player:
+        #             adjacentCoords = Coord.iter_adjacent(coord)
+        #             # Iterates over the possible moves of the current unit to validate them
+        #             for adjacentCoord in adjacentCoords:
+        #                 game_copy = self.clone()
+        #                 move = CoordPair(coord, adjacentCoord)
+        #                 if game_copy.perform_move(move):
+        #                     game_copy.next_turn()
+        #                     children.append(game_copy)
+        for (coord, unit) in self.player_units(player):
+            adjacentCoords = Coord.iter_adjacent(coord)
+            # Iterates over the possible moves of the current unit to validate them
+            for adjacentCoord in adjacentCoords:
+                game_copy = self.clone()
+                move = CoordPair(coord, adjacentCoord)
+                if game_copy.perform_move(move)[0]:
+                    game_copy.next_turn()
+                    children.append((game_copy, move))
+            # Considering the possiblity of self-destruct
+            selfdestruct_move = CoordPair(coord, coord)
+            if game_copy.perform_move(selfdestruct_move)[0]:
+                game_copy.next_turn()
+                children.append((game_copy, selfdestruct_move))
+        return children
 
     # Method to return the defender's AI's position in the grid system
     def ai_position(self) -> Coord:
@@ -514,9 +568,10 @@ class Game:
             unit = self.get(coord)
             if unit and unit.player == Player.Defender and unit.type == UnitType.AI:
                 position = coord
-        return position
+                return position
 
     # Method to return the attacker's program positions in the grid system
+
     def prog_position(self) -> Iterable[Coord]:
         mid_position = Coord(2, 2)
         grid = mid_position.iter_range(2)
@@ -557,18 +612,21 @@ class Game:
         elif y_reach < 0 and x_reach > 0 and self.get(unit_up) and self.get(unit_right):
             reach += 1
         elif (
-            y_reach > 0 and x_reach < 0 and self.get(unit_down) and self.get(unit_left)
+            y_reach > 0 and x_reach < 0 and self.get(
+                unit_down) and self.get(unit_left)
         ):
             reach += 1
         elif (
-            y_reach > 0 and x_reach > 0 and self.get(unit_down) and self.get(unit_right)
+            y_reach > 0 and x_reach > 0 and self.get(
+                unit_down) and self.get(unit_right)
         ):
             reach += 1
 
         # If any of the adjacent coordinates are enemy units, increase the reach by 1. This means you might have to defeat them first to get
         # to the AI (like Techs) or that you must go around them
         if (
-            (self.get(unit_right) and self.get(unit_right).player == Player.Defender)
+            (self.get(unit_right) and self.get(
+                unit_right).player == Player.Defender)
             or (self.get(unit_left) and self.get(unit_left).player == Player.Defender)
             or (self.get(unit_up) and self.get(unit_up).player == Player.Defender)
             or (self.get(unit_down) and self.get(unit_down).player == Player.Defender)
@@ -615,7 +673,7 @@ class Game:
     def is_valid_move(self, coords: CoordPair) -> bool:
         """Validate a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         if not self.is_valid_coord(coords.src) or not self.is_valid_coord(coords.dst):
-            print("Invalid coordinate input")
+            # print("Invalid coordinate input")
             return False
 
         # Generating the unit from the source coordinate, generating an array of all adjacent coordinates for possible moves
@@ -625,27 +683,28 @@ class Game:
 
         # Checking that the source coordinate is indeed a unit
         if unit is None or unit.player != self.next_player:
-            print(
-                "There is no unit in your source coordinate or you do not own that unit."
-            )
+            # print(
+            #     "There is no unit in your source coordinate or you do not own that unit."
+            # )
             return False
 
         # Checking that the destination coordinate is an adjacent square
         if coords.dst not in adjacentCoords and coords.dst != coords.src:
-            print(
-                "Your destination coordinate is not adjacent to the source coordinate."
-            )
+            # print(
+            #     "Your destination coordinate is not adjacent to the source coordinate."
+            # )
             return False
 
         # No movement restrictions on Viruses or Tech
         if (
-            unit.type not in [UnitType.Virus, UnitType.Tech] and dst_unit is None
+            unit.type not in [UnitType.Virus,
+                              UnitType.Tech] and dst_unit is None
         ):  # Those units may still repair or attack in those coordinates
             # Verifying if the unit is engaged in combat
             for adjacentCoord in adjacentCoords:
                 adjacentUnit = self.get(adjacentCoord)
                 if adjacentUnit is not None and adjacentUnit.player != unit.player:
-                    print("That unit is engaged in combat and cannot flee.")
+                    # print("That unit is engaged in combat and cannot flee.")
                     return False
 
             # Validating move depending on the Player type
@@ -653,11 +712,11 @@ class Game:
                 unit.player == Player.Attacker
             ):  # Attacker's AI, Firewall and Program can only go left or up
                 if coords.dst.col > coords.src.col or coords.dst.row > coords.src.row:
-                    print("That unit may only go up or left.")
+                    # print("That unit may only go up or left.")
                     return False
             else:  # Defender's AI, Firewall and Program can only go right or down
                 if coords.dst.col < coords.src.col or coords.dst.row < coords.src.row:
-                    print("That unit may only go down or right.")
+                    # print("That unit may only go down or right.")
                     return False
 
         # If the move is a repair, checking that a tech is not repairing a virus
@@ -667,13 +726,13 @@ class Game:
             and not dst_unit == unit
         ):  # Checking if the move is a repair
             if unit is UnitType.Tech and dst_unit is UnitType.Virus:
-                print("Your tech cannot repair your virus.")
+                # print("Your tech cannot repair your virus.")
                 return False
 
             if (
                 dst_unit.health >= 9
             ):  # Checking if the destination unit is alrdy at full health
-                print("That unit is at full health. You can't repair it.")
+                # print("That unit is at full health. You can't repair it.")
                 return False
 
         return True
@@ -895,10 +954,14 @@ class Game:
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
-        (score, move, avg_depth) = self.random_move()
+        # (score, move) = self.random_move()  # Removed avg_depth
+        (score, move) = self.alpha_beta(self.options.max_depth, -
+                                        (math.inf), math.inf)  # Removed avg_depth
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
-        print(f"Heuristic score: {self.evaluate()}")
+        print(f"Suggested move: {move} with score of {score} ")
+
+        print(f"Heuristic score: {self.evaluate('e2')}")
         # print(f"Average recursive depth: {avg_depth:0.1f}") we don't need this
         print(f"Evals per depth: ", end="")
         for k in sorted(self.stats.evaluations_per_depth.keys()):
@@ -906,18 +969,20 @@ class Game:
         print()
         total_evals = sum(self.stats.evaluations_per_depth.values())
         if self.stats.total_seconds > 0:
-            print(f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
+            print(
+                f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
 
         best_move = None
         max_eval = float("-inf")
 
-        for child in self.get_children_nodes(Player.Attacker):
-            eval = self.minimax(child, self.options.max_depth, False)
-            if eval > max_eval:
-                max_eval = eval
-                best_move = move
-        return best_move
+        # for child in game.get_children_nodes(Player.Attacker):
+        #     eval = self.minimax(child, game.options.max_depth, False)
+        #     if eval > max_eval:
+        #         max_eval = eval
+        #         best_move = move
+        # return best_move
+        return move
 
     def post_move_to_broker(self, move: CoordPair):
         """Send a move to the game broker."""
