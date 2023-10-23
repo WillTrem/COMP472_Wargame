@@ -888,7 +888,7 @@ class Game:
         else:
             return (0, None, 0)
 
-    def suggest_move(self, game) -> CoordPair | None:
+    def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
         (score, move, avg_depth) = self.random_move()
@@ -908,8 +908,8 @@ class Game:
         best_move = None
         max_eval = float("-inf")
 
-        for child in game.get_children_nodes(Player.Attacker):
-            eval = self.minimax(child, game.options.max_depth, False)
+        for child in self.get_children_nodes(Player.Attacker):
+            eval = self.minimax(child, self.options.max_depth, False)
             if eval > max_eval:
                 max_eval = eval
                 best_move = move
@@ -986,7 +986,7 @@ def main():
     parser.add_argument(
         "--game_type",
         type=str,
-        default="manual",
+        default="",
         help="game type: auto|attacker|defender|manual",
     )
     parser.add_argument("--broker", type=str, help="play via a game broker")
