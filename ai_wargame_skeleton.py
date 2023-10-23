@@ -456,7 +456,7 @@ class Game:
             return self.heuristic_e0()
 
     def minimax(self, depth, maximizing_player):
-        
+
         if depth == 0 or self.is_finished():
           # If the search depth is 0 or the game is finished, return an evaluation score
             return self.evaluate()
@@ -464,7 +464,7 @@ class Game:
         if maximizing_player:
             max_eval = float("-inf")
             # For the maximizing player (attacker), find the move with the highest score.
-            for child in self.get_children_nodes(Player.Attacker):
+            for (child, move) in game.get_children_nodes(Player.Attacker):
                 # Recursively call minimax with the defender's perspective (maximizing_player=False)
                 eval = self.minimax(child, depth - 1, False)
                 max_eval = max(max_eval, eval)
@@ -472,7 +472,7 @@ class Game:
         else:
             min_eval = float("inf")
             # For the minimizing player (defender), find the move with the lowest score.
-            for child in self.get_children_nodes(Player.Defender):
+            for (child, move) in game.get_children_nodes(Player.Defender):
                 # Recursively call minimax with the attacker's perspective (maximizing_player=True)
                 eval = self.minimax(child, depth - 1, True)
                 min_eval = min(min_eval, eval)
@@ -883,7 +883,7 @@ class Game:
                 self.next_turn()
         elapse_time = (datetime.now()-start_time).total_seconds()
         return mv, elapse_time
-    
+
     def timeout(self):
         process = multiprocessing.Process(target=self.computer_turn, args=())
         process.start()
@@ -895,12 +895,12 @@ class Game:
             print("AI move calculation timed out.")
             return None
         else:
-         mv, elapsed_time = process.exitcode
+            mv, elapsed_time = process.exitcode
 
         if mv is None:
             print(f"AI move calculation took {elapsed_time:.2f} seconds.")
         return mv
-        
+
     def player_units(self, player: Player) -> Iterable[Tuple[Coord, Unit]]:
         """Iterates over all units belonging to a player."""
         for coord in CoordPair.from_dim(self.options.dim).iter_rectangle():
@@ -951,8 +951,17 @@ class Game:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
         # (score, move) = self.random_move()  # Removed avg_depth
-        (score, move) = self.alpha_beta(self.options.min_depth, -
-                                        (math.inf), math.inf)  # Removed avg_depth
+        if self.options.alpha_beta:
+            (score, move) = self.alpha_beta(self.options.max_depth, -
+                                            (math.inf), math.inf)  # Removed avg_depth
+        else:
+            score = float("-inf")
+            for (child, child_move) in self.get_children_nodes(self.next_player):
+                eval = self.minimax(child, self.options.max_depth-1, False)
+                if eval > max_eval:
+                    max_eval = eval
+                    move = child_move
+
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Suggested move: {move} with score of {score} ")
@@ -969,15 +978,6 @@ class Game:
                 f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
 
-        best_move = None
-        max_eval = float("-inf")
-
-        # for child in game.get_children_nodes(Player.Attacker):
-        #     eval = self.minimax(child, game.options.max_depth, False)
-        #     if eval > max_eval:
-        #         max_eval = eval
-        #         best_move = move
-        # return best_move
         return move
 
     def post_move_to_broker(self, move: CoordPair):
@@ -1055,6 +1055,8 @@ def main():
         help="game type: auto|attacker|defender|manual",
     )
     parser.add_argument("--broker", type=str, help="play via a game broker")
+    parser.add_argument("--alpha_beta", type=str,
+                        help="Use of Alpha Beta pruning")
     args = parser.parse_args()
 
     # parse the game type
@@ -1077,6 +1079,8 @@ def main():
         options.max_time = args.max_time
     if args.broker is not None:
         options.broker = args.broker
+    if args.alpha_beta is not None:
+        options.alpha_beta = (args.alpha_beta == 'True')
 
     if options.max_turns is None:
         while True:
