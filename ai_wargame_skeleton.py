@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from time import sleep
 from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
+import multiprocessing
+from datetime import datetime
 
 import requests
 import math
@@ -871,6 +873,7 @@ class Game:
 
     def computer_turn(self) -> CoordPair | None:
         """Computer plays a move."""
+        start_time = datetime.now()
         mv = self.suggest_move()
         if mv is not None:
             (success, result) = self.perform_move(mv)
@@ -878,8 +881,26 @@ class Game:
                 print(f"Computer {self.next_player.name}: ", end="")
                 print(result)
                 self.next_turn()
-        return mv
+        elapse_time = (datetime.now()-start_time).total_seconds()
+        return mv, elapse_time
+    
+    def timeout(self):
+        process = multiprocessing.Process(target=self.computer_turn, args=())
+        process.start()
+        process.join(timeout=self.options.max_time)
 
+        if process.is_alive():
+            # If the AI calculation process is still running after the timeout, terminate it
+            process.terminate()
+            print("AI move calculation timed out.")
+            return None
+        else:
+         mv, elapsed_time = process.exitcode
+
+        if mv is None:
+            print(f"AI move calculation took {elapsed_time:.2f} seconds.")
+        return mv
+        
     def player_units(self, player: Player) -> Iterable[Tuple[Coord, Unit]]:
         """Iterates over all units belonging to a player."""
         for coord in CoordPair.from_dim(self.options.dim).iter_rectangle():
